@@ -1,0 +1,17 @@
+knapsack - A fast solver for the bound and unbound 0/1-knapsack problem with integer weights with relatively low memory requirements
+
+(C) Martin Väth <martin@mvath.de>
+This project is distributed under the terms of the
+GNU General Public License v2.
+
+This program was written rather quickly to train myself.
+
+It uses a dynamic programming type approach to the 0/1 knapsack problem
+(in the bound or unbound form).
+
+Note that the classical dynamic programming approach based on arrays
+requires an enormous amount of memory if the weights are huge.
+In contrast, this program uses only actually needed memory.
+
+Therefore, this program is appropriate to e.g. calculate an "optimal"
+filling for a CD or DVD from a given collection of relatively large files.
