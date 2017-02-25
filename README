@@ -15,3 +15,20 @@ In contrast, this program uses only actually needed memory.
 
 Therefore, this program is appropriate to e.g. calculate an "optimal"
 filling for a CD or DVD from a given collection of relatively large files.
+
+The program consists of libraries which can be used independently:
+
+knapsack.h:        The main class consisting of generic templates libraries.
+                   The output functions have to be overloaded.
+knapsack_output.h: Some instances of the Knapsack classes with output overload
+
+The libraries are consumed by
+knapsack.cc:       A simple CLI to some of the instances
+
+Installation:
+Just run "make" (as user) and "make install" (as root).
+To use the libraries, just include them (with the appropriate path)
+To use the zsh completion file, make sure that it is in you zsh's $fpath.
+
+To get help for the CLI, type
+knapsack -h

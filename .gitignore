@@ -1,0 +1,6 @@
+knapsack
+knapsack-*.asc
+knapsack-*.tar.*
+knapsack-*.zip
+*.o
+*.obj

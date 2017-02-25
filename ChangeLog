@@ -1,0 +1,13 @@
+# ChangeLog for knapsack
+
+*knapsack-2.0
+	Martin Väth <martin at mvath.de>:
+	- Provide libraries as generic templates
+	- Provide zsh completion
+	- Provide a tiny testsuite
+	- Provide a Makefile
+	- Add .gitignore and CPPLINT
+
+*knapsack-1.0
+	Martin Väth <martin at mvath.de>:
+	- Initial implementation within 1-2 hours
