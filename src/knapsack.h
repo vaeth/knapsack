@@ -116,8 +116,8 @@ template <class Weight, class Value> class KnapsackBound
       return entry.max_value_;
     }
     Value result0 = SolveRecurse(i + 1, max_weight);
-    max_weight -= weight_[i];
-    if (max_weight >= 0) {
+    if (max_weight >= weight_[i]) {
+      max_weight -= weight_[i];
       Value result1 = value_[i] + SolveRecurse(i + 1, max_weight);
       if (result1 > result0) {
         entry.state_ = MaxSelected<Value>::kSelected;

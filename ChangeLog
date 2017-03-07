@@ -1,5 +1,13 @@
 # ChangeLog for knapsack
 
+*knapsack-3.0
+	Martin Väth <martin at mvath.de>:
+	- Use https://github.com/vaeth/osformat for typesafe output:
+	- Turn the classes in knapsack_output.h into generic templates
+	  (which is possible using the osformat class)
+	- Let the CLI use the highest integer/floating precision which is
+	  natively supported by the compiler
+
 *knapsack-2.0
 	Martin Väth <martin at mvath.de>:
 	- Provide libraries as generic templates

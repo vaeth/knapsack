@@ -20,14 +20,30 @@ The program consists of libraries which can be used independently:
 
 knapsack.h:        The main class consisting of generic templates libraries.
                    The output functions have to be overloaded.
-knapsack_output.h: Some instances of the Knapsack classes with output overload
+knapsack_output.h: Some template instances of the Knapsack classes with output
+                   overloaded using typesafe https://github.com/vaeth/osformat
 
 The libraries are consumed by
-knapsack.cc:       A simple CLI to some of the instances
+knapsack.cc:       A simple CLI to knapsack_output.h with the largest possible
+                   precision which is still natively supported by the compiler
+
+Requirements:
+To use the knapsack_output.h file or to compile/use the CLI, you need to have
+https://github.com/vaeth/osformat
+installed.
 
 Installation:
-Just run "make" (as user) and "make install" (as root).
-To use the libraries, just include them (with the appropriate path)
+If the requirement is fulfilled, compilation of the CLI should be simple:
+Just run "make" (as user) and "make install" (as root)
+Look at the Makefile if you need to adapt paths.
+
+To use the libraries, just include them (with the appropriate path);
+when using knapsack_output.h, you will also have to include appropriate
+compiler and linker flags for the osformat library.
+Usually, you should get these with
+ pkg-config --libs osformat
+ pkg-config --cflags osformat
+
 To use the zsh completion file, make sure that it is in you zsh's $fpath.
 
 To get help for the CLI, type

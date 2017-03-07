@@ -7,11 +7,12 @@
 #ifndef SRC_KNAPSACK_OUTPUT_H_
 #define SRC_KNAPSACK_OUTPUT_H_ 1
 
-#include <cstdio>  // printf
+// Instances of KnapsackBound/KnapsackUnbound with typesafe output using
+// https://github.com/vaeth/osformat
+
+#include <osformat.h>
 
 #include "src/knapsack.h"
-
-// This contains several instances of Knapsack with output to stdout.
 
 template <class Weight, class Value> class KnapsackBoundOutput
     : public KnapsackBound<Weight, Value> {
@@ -20,11 +21,31 @@ template <class Weight, class Value> class KnapsackBoundOutput
 
  public:
   typedef KnapsackBound<Weight, Value> super;
+  using typename super::weight_type;
+  using typename super::value_type;
+  using typename super::size_type;
+  using super::weight_;
+  using super::value_;
+  using super::get_value_is_weight;
 
-  void Solve() {
+  virtual void Solve() {
     sep = "\n";
     super::Solve();
-    printf("\n");
+    osformat::Say(false);
+  }
+
+  virtual void Output(Value value) {
+    osformat::Print() % value;
+  }
+
+  virtual void OutputDetail(size_type index) {
+    weight_type weight = weight_[index];
+    if (get_value_is_weight()) {
+      osformat::Print("%s%s") % sep % weight;
+    } else {
+      osformat::Print("%s%s(%s)") % sep % weight % value_[index];
+    }
+    sep = " ";
   }
 };
 
@@ -35,83 +56,32 @@ template <class Weight, class Value, class Count> class KnapsackUnboundOutput
 
  public:
   typedef KnapsackUnbound<Weight, Value, Count> super;
+  using typename super::weight_type;
+  using typename super::value_type;
+  using typename super::count_type;
+  using typename super::size_type;
+  using super::weight_;
+  using super::value_;
+  using super::get_value_is_weight;
 
-  void Solve() {
+  virtual void Solve() {
     sep = "\n";
     super::Solve();
-    printf("\n");
+    osformat::Say(false);
   }
-};
 
-class KnapsackBoundOutputDouble : public KnapsackBoundOutput<int, double> {
- public:
   virtual void Output(value_type value) {
-    std::printf("%g", value);
-  }
-
-  virtual void OutputDetail(size_type index) {
-    weight_type weight = weight_[index];
-    if (get_value_is_weight()) {
-      std::printf("%s%d", sep, weight);
-    } else {
-      std::printf("%s%d(%g)", sep, weight, value_[index]);
-    }
-    sep = " ";
-  }
-};
-
-class KnapsackBoundOutputInt : public KnapsackBoundOutput<int, int> {
- public:
-  virtual void Output(value_type value) {
-    std::printf("%d", value);
-  }
-
-  virtual void OutputDetail(size_type index) {
-    weight_type weight = weight_[index];
-    if (get_value_is_weight()) {
-      std::printf("%s%d", sep, weight);
-    } else {
-      std::printf("%s%d(%d)", sep, weight, value_[index]);
-    }
-    sep = " ";
-  }
-};
-
-class KnapsackUnboundOutputDouble
-    : public KnapsackUnboundOutput<int, double, int> {
- public:
-  virtual void Output(value_type value) {
-    std::printf("%g", value);
+    osformat::Print() % value;
   }
 
   virtual void OutputDetail(count_type count, size_type index) {
     weight_type weight = weight_[index];
     if (get_value_is_weight()) {
-      std::printf("%s%d*%d=%d", sep, count, weight, count * weight);
+      osformat::Print("%s%s*%s=%s") % sep % count % weight % (count * weight);
     } else {
       value_type value = value_[index];
-      std::printf("%s%d*%d(%d*%g=%g)", sep, count, weight, count, value,
-        count * value);
-    }
-    sep = " ";
-  }
-};
-
-class KnapsackUnboundOutputInt
-    : public KnapsackUnboundOutput<int, int, int> {
- public:
-  virtual void Output(value_type value) {
-    std::printf("%d", value);
-  }
-
-  virtual void OutputDetail(count_type count, size_type index) {
-    weight_type weight = weight_[index];
-    if (get_value_is_weight()) {
-      std::printf("%s%d*%d=%d", sep, count, weight, count * weight);
-    } else {
-      value_type value = value_[index];
-      std::printf("%s%d*%d(%d*%d=%d)", sep, count, weight, count, value,
-        count * value);
+      osformat::Print("%s%s*%s(%s*%s=%s)") % sep % count % weight % count
+        % value % (count * value);
     }
     sep = " ";
   }

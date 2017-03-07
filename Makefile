@@ -1,7 +1,12 @@
 PREFIX=/usr
 BIN_DIR=$(PREFIX)/bin
 ZSH_FPATH=$(PREFIX)/share/zsh/site-functions
-INCLUDE_PATH=$(PREFIX)/include/knapsack
+INCLUDE_PATH=$(PREFIX)/include
+PKGINCLUDE_PATH=$(INCLUDE_PATH)/knapsack
+
+PKGCONFIG = pkg-config
+OSFORMAT_CFLAGS = $(shell $(PKGCONFIG) --cflags osformat || echo -I$(INCLUDE_PATH)/osformat)
+OSFORMAT_LIBS = $(shell $(PKGCONFIG) --libs osformat || echo -losformat)
 
 MAKE_CPPFLAGS=-I. -DNDEBUG
 
@@ -10,7 +15,9 @@ MAKE_CPPFLAGS=-I. -DNDEBUG
 all: knapsack
 
 knapsack: src/knapsack.cc src/knapsack.h src/knapsack_output.h
-	$(CXX) $(MAKE_CPPFLAGS) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) \
+	$(CXX) $(MAKE_CPPFLAGS) $(CPPFLAGS) \
+		$(OSFORMAT_CFLAGS) $(CXXFLAGS) \
+		$(OSFORMAT_LIBS) $(LDFLAGS) \
 		-o knapsack src/knapsack.cc
 
 install: knapsack
@@ -40,7 +47,7 @@ distclean: clean FORCE
 
 maintainer-clean: distclean FORCE
 
-test: knapsack
+check: knapsack
 	contrib/testsuite ./knapsack
 
 FORCE:
