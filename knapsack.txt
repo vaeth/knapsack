@@ -1,0 +1,100 @@
+Description of the library (knapsack.h):
+
+The library consists exclusively of template classes which are successively
+inherited from each other:
+
+KnapsackBase
+  An abstract class having no other purpose than to have a common base class
+  which is actually not a template: So you can conveniently have lists of
+  different instances of the other classes.
+  It provides a virtual destructor and a virtual SolveAppend() (see below)
+
+KnapsackWeight<Weight, Count = vector<Weight>::size_type>
+  Weight and Count should be integer types; they need to contain only
+  nonnegative numbers.
+  This is an abstract class (inherited from KnapsackBase) containing the types
+
+  weight_type (the type <Weight>)
+  WeightList  (a vector of weight_type's)
+  size_type   (the size_type of WeightList)
+  count_type  (the type <Count>)
+  CountList   (a vector of count_type's)
+
+  and the public members:
+
+  weight_ and knapsack_ (both of type WeightList)
+    These vectors describe the items to be distributed into the knapsacks
+    as well as the maximum weight of each knapsack, respectively
+
+  count_ (of type CountList)
+    This vector describes for each item how many instances of that item are
+    available for distributions into the various knapsacks.
+    This vector can be shorter than weight_ or even empty:
+    All entries after the end of count_ are interpreted as 1.
+    In particular, if if count_ is not initialized, it is assumed that every
+    entry from weight_ corresponds to only 1 item which can be distributed.
+    The case that count_ is not positive is treated specially:
+    In this case, it is assumed that an unlimited number of the corresponding
+    items is available. (If all items exist in an unlimited number, this is
+    known in the literature as the unbound knapsack problem).
+
+  The class provides the following member functions:
+
+  empty()      A shortcut for weight_.empty()
+  size()       A shortcut for weight_.size()
+  sack_empty() A shortcut for knapsack_.empty()
+  sack_size()  A shortcut for knapsack_.size()
+  clear()      Clears all above lists.
+  get_count(i) Returns count_[i] or 1 if count_[i] does not exist
+  IsBound(i)   Returns true if get_count(i) is positive
+
+Knapsack<Weight, Value = Weight, Count = vector<Weight>::size_type>
+  The main class inherited from KnapsackWeight.
+  This is a separate class so that one can have pointers to KnapsackWeight
+  with the same Weight and Count types, but with different Value types
+  (e.g. some as float types and other as Count types).
+  The following types are provided by the class:
+
+  super       (The correspondingly instantiated KnapsackWeight class)
+  value_type  (The type <Value>)
+  ValueList   (A vector of value_type's)
+
+  The following types are used to return the result:
+
+  SackContent (A map from the item index to how often it is used in the sack)
+  SackList    (A vector of SackContent's of size sack_size())
+
+  The following member is added (to those inherited from KnapsackWeight):
+
+  value_     (of type ValueList)
+    This vector describes the values of the items.
+    If an entry is not positive, it is assumed that the value of the item is
+    the same as its weight (i.e. the correpesponding entry of weight_,
+    cast into the type <value_type).
+    The length of this vector can be shorter than weight_: Entries after the
+    end are interpreted as 0. In particular, if this vector is not initialized,
+    it is assumed that all items have the same value as their weight.
+
+  The following methods are available:
+
+  ValueIsWeight(i) True if value_[i] is the same as weight by above rules
+  get_value(i) This returns value_[i], interpreted by the rules described above
+  clear()      This empties all lists
+  Solve(SackList *sack_list = 0)
+  SolveAppend(std::string *str)
+
+  The method Solve() is the main method of this whole library:
+  It returns the maximum total value which can be achieved for the
+  current data. If the argument sack_list is not the null pointer,
+  also one possibility to attain this maximum is stored in sack_list.
+
+  The method SolveAppend() is similar to Solve(), but it appends the result to
+  the passed string in a human readable format. The exact format depens on
+  whether the values and weights differ for items in the solution,
+  whether items are used multiple times in the soution, and whether
+  several knapsacks are used in the solution. SolveAppend() uses some auxiliary
+  virtual functions named Format...()
+  To change the output format partially (e.g. foreign translation in the
+  output) or completely, a simple way is to inherit a class from Knapsack<...>
+  and to override the definitions of these virutal Format...() functions or to
+  override the virtual method SolveAppend() completely.

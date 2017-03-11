@@ -2,7 +2,6 @@
 _arguments -s -S -A '-*' : \
 '(* -)-h[print help]' \
 '(* -)-V[print version]' \
-'(* -)-e[values are the same as the weights]' \
-'(* -)-u[unbound knapsack problem\: items can be reused]' \
-'1::total weight:()' \
-'*::weight/value:()'
+'(* -)-f[values are floating point]' \
+'(* -)-s[add specified \[count\:\]sack]' \
+'*::item (\[count\:\]weight\[\=value\]):()'

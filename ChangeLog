@@ -1,5 +1,19 @@
 # ChangeLog for knapsack
 
+*knapsack-4.0
+	Martin Väth <martin at mvath.de>:
+	- This is practically a complete rewrite, saving only some concepts:
+	- Support multiple knapsacks
+	- Support mixing bound and unbound items
+	- Handle multiplicity of items without re-entering
+	- Possibly fix false results in the bound case (the old function used
+	  an output logic which might be too simple in some complex situations)
+	- CLI supports now integer values (even by default)
+	- Complete rework of EAPI and CLI
+	- Depend on boost for hashing
+	- Since boost is needed anyway, depend also on boost::format
+	- Drop dependency on https://github.com/vaeth/osformat
+
 *knapsack-3.0
 	Martin Väth <martin at mvath.de>:
 	- Use https://github.com/vaeth/osformat for typesafe output:
