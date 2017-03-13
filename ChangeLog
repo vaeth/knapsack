@@ -1,5 +1,13 @@
 # ChangeLog for knapsack
 
+*knapsack-6.0
+	Martin Väth <martin at mvath.de>:
+	- Bugfix: In some corner cases (when bound and unbound items both occur
+	  and certain strategies for placing unbound items first fail),
+	  knapsack-4.0 and knapsack-5.0 could fail to return all items:
+	  The optimal value was calculated correctly, but the returned/output
+	  optimal solution might be missing some items.
+
 *knapsack-5.0
 	Martin Väth <martin at mvath.de>:
 	- knapsack-4.0 made for bound items mistakenly the sack part of the

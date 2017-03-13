@@ -471,41 +471,63 @@ template <class Weight, class Value,
     value_type result(SolveUnbound());
     if (sack_list) {
       SackSet& sack_set = calc_->sack_set_;
-      {  // Proceed in the order we stored the data: First the unbound items
-        typename Calc::UnboundHash& hash = calc_->unbound_hash_;
-        for (;;) {
-          typename Calc::UnboundHash::const_iterator
-            found(hash.find(sack_set));
-          if ((found == hash.end()) || !found->second.IsSelected()) {
-            break;
-          }
-          const EntryUnbound& entry = found->second;
-          size_type item(entry.get_item());
-          size_type sack(entry.get_sack());
-          ++(*sack_list)[sack][item];
-          sack_set.DecreaseBy(sack, weight_[item]);
-        }
-      }
-      if (calc_->have_bound_) {  // Now the bound items
-        typename Calc::BoundHash& hash = calc_->bound_hash_;
-        BoundItem& bound = calc_->bound_;
-        for (;;) {
-          typename Calc::BoundHash::const_iterator found(
-            hash.find(BoundIndex(bound, sack_set)));
-          if ((found != hash.end()) && found->second.IsSelected()) {
-            size_type item(bound.first);
-            size_type sack(found->second.get_sack());
+      typename Calc::UnboundHash& unbound_hash = calc_->unbound_hash_;
+      typename Calc::BoundHash& bound_hash = calc_->bound_hash_;
+      bool have_bound(calc_->have_bound_);
+      BoundItem bound(calc_->bound_);
+      // bound and unbound items might be wildly mixed in the hashes:
+      // We start with all unbound (since this is likely the first) as long as
+      // we find, then all bound as long as we find, then again all unbound
+      // (unless bound found nothing), then all bound (starting with next item
+      // if unbound found nothing), etc.
+      for (bool found_bound(true), found_unbound(true); ;
+        found_unbound = false) {
+        if (found_bound) {  // bound search succeeded or we are in first round
+          for (;;) {  // search/update according to unbound_hash
+            typename Calc::UnboundHash::const_iterator
+              found(unbound_hash.find(sack_set));
+            if ((found == unbound_hash.end()) || !found->second.IsSelected()) {
+              break;
+            }
+            found_unbound = true;
+            const EntryUnbound& entry = found->second;
+            size_type item(entry.get_item());
+            size_type sack(entry.get_sack());
             ++(*sack_list)[sack][item];
             sack_set.DecreaseBy(sack, weight_[item]);
-            if (--bound.second != 0) {
-              continue;
-            }
           }
-          size_type item(FirstBound(bound.first + 1));
-          if (item == super::size()) {
+        }
+        if (!have_bound) {
+          break;
+        }
+        if (!found_unbound) {  // unbound search failed and not in first round
+          // Pass to next item
+          size_type i(FirstBound(bound.first + 1));
+          if (i == super::size()) {  // search for bound items is finished
             break;
           }
-          bound = BoundItem(item, super::get_count(item));
+          bound = BoundItem(i, super::get_count(i));
+        }
+        found_bound = false;
+        for (;;) {  // search/update according to bound_hash
+          typename Calc::BoundHash::const_iterator found(
+            bound_hash.find(BoundIndex(bound, sack_set)));
+          if ((found == bound_hash.end()) || !found->second.IsSelected()) {
+            break;
+          }
+          found_bound = true;
+          size_type item(bound.first);
+          size_type sack(found->second.get_sack());
+          ++(*sack_list)[sack][item];
+          sack_set.DecreaseBy(sack, weight_[item]);
+          if (--bound.second == 0) {  // Update bound resources
+            size_type i(FirstBound(bound.first + 1));
+            if (i == super::size()) {  // search for bound items is finished
+              have_bound = false;  // still retry once unbound items
+              break;
+            }
+            bound = BoundItem(i, super::get_count(i));
+          }
         }
       }
     }
