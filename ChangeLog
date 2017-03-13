@@ -1,5 +1,22 @@
 # ChangeLog for knapsack
 
+*knapsack-5.0
+	Martin Väth <martin at mvath.de>:
+	- knapsack-4.0 made for bound items mistakenly the sack part of the
+	  hash index instead of the stored data. This led to correct results,
+	  but it could multiply the time and space requirements by the number
+	  of used sacks. Now also for bound items the index should be correct.
+	- Use boost::unordered_map instead of std::unordered_map so that C++-11
+	  is not mandatory and hash functions can be declared "boost" style
+	- knapsack-4.0 had an unknown bug which sometimes caused to miss an
+	  optimal solution; apparently this was fixed by code rewriting done
+	  for the above fixes.
+	- testsuite: Some instances are fixed: The solution is better than what
+	  "manual" guessing (confirmed by buggy knapsack-4.0) had found.
+	  Unfortunately, I do not have access to independent examples, so code
+	  or testsuite might still contain undetected bugs...
+	- Makefile: Do not force C++-11
+
 *knapsack-4.0
 	Martin Väth <martin at mvath.de>:
 	- This is practically a complete rewrite, saving only some concepts:

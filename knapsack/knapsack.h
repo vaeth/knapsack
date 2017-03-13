@@ -8,14 +8,14 @@
 #define KNAPSACK_KNAPSACK_H_ 1
 
 #include <boost/format.hpp>  // boost::format
-#include <boost/functional/hash.hpp>  // boost::hash_value
+#include <boost/unordered_map.hpp>  // boost::unordered_map and hash stuff
 
 #include <cstdlib>  // std::size_t
 
 #include <map>
 #include <set>
 #include <string>
-#include <unordered_map>
+#include <utility>  // std::pair
 #include <vector>
 
 class KnapsackBase {
@@ -138,7 +138,7 @@ template <class Weight, class Value,
       set_ = WeightSet();
       iterator_ = IteratorList(s.set_.size(), set_.end());
       for (size_type i(0); i < s.set_.size(); ++i) {
-        iterator_[i] = set_.insert(s.get(i));
+        iterator_[i] = set_.insert(s[i]);
       }
     }
 
@@ -151,8 +151,10 @@ template <class Weight, class Value,
     }
 
     // Provide a Hash function
-    std::size_t operator()(const SackSet& weight_set) const {
-      return boost::hash_value(weight_set.set_);
+    friend std::size_t hash_value(const SackSet &sack_set) {
+      std::size_t seed(0);
+      boost::hash_combine(seed, sack_set.set_);
+      return seed;
     }
 
     // Provide the equal operator needed for hashing
@@ -160,11 +162,7 @@ template <class Weight, class Value,
       return set_ == s.set_;
     }
 
-    bool operator!=(const SackSet &s) const {
-      return set_ != s.set_;
-    }
-
-    Weight get(size_type index) const {
+    Weight operator[](size_type index) const {
       return *iterator_[index];
     }
 
@@ -189,96 +187,60 @@ template <class Weight, class Value,
     }
   };
 
-  // A class which handles our hashing of bound resources
-  class Bound {
+  // A class containing all data of bound items:
+  // item (first) and its count (second)
+  typedef std::pair<size_type, count_type> BoundItem;
+
+  // A class which serves as the hash index for bound items
+  class BoundIndex {
    public:
+    typedef typename Knapsack<Weight, Value, Count>::BoundItem BoundItem;
     typedef typename KnapsackWeight<Weight, Count>::size_type size_type;
     typedef Count count_type;
 
-    size_type index_;
-    size_type sack_;
-    count_type count_;
+    BoundItem bound_item_;
     SackSet sack_set_;
 
-    Bound() {
+    BoundIndex(const BoundItem& bound_item, const SackSet& sack_set)
+      : bound_item_(bound_item), sack_set_(sack_set) {
     }
 
-    Bound(size_type index, size_type sack, count_type count,
-        const SackSet& sack_set)
-      : index_(index), sack_(sack), count_(count), sack_set_(sack_set) {
-    }
-
-    void assign(size_type index, size_type sack, count_type count,
-        const SackSet& sack_set) {
-      index_ = index;
-      sack_ = sack;
-      count_ = count;
+    void assign(const BoundItem& bound_item, const SackSet& sack_set) {
+      bound_item_ = bound_item;
       sack_set_ = sack_set;
     }
 
-    std::size_t operator()(const Bound& b) const {
-      std::size_t seed(sack_set_(b.sack_set_));
-      boost::hash_combine(seed, b.index_);
-      boost::hash_combine(seed, b.sack_);
-      boost::hash_combine(seed, b.count_);
+    friend std::size_t hash_value(const BoundIndex& b) {
+      std::size_t seed(0);
+      boost::hash_combine(seed, b.bound_item_);
+      boost::hash_combine(seed, b.sack_set_);
       return seed;
     }
 
-    bool operator==(const Bound& s) const {
-      return ((index_ == s.index_) && (sack_ == s.sack_) &&
-        (count_ == s.count_) && (sack_set_ == s.sack_set_));
+    bool operator==(const BoundIndex& b) const {
+      return ((bound_item_ == b.bound_item_) && (sack_set_ == b.sack_set_));
     }
 
-    bool operator!=(const Bound& s) const {
-      return !(this == s);
+    const BoundItem& get_bound() const {
+      return bound_item_;
+    }
+
+    size_type get_item() const {
+      return bound_item_.first;
+    }
+
+    count_type get_count() const {
+      return bound_item_.second;
     }
   };
 
   class EntryBound {
-   public:
-    typedef Value value_type;
-
-    bool IsSelected() const {
-      return selected_;
-    }
-
-    value_type get_value() const {
-      return value_;
-    }
-
-    void set_value(Value value) {
-      value_ = value;
-    }
-
-    void Select(Value value) {
-      selected_ = true;
-      value_ = value;
-    }
-
-    EntryBound()
-      : selected_(false) {
-    }
-
-    explicit EntryBound(Value value)
-      : selected_(false), value_(value) {
-    }
-
-   private:
-    bool selected_;
-    value_type value_;
-  };
-
-  class EntryUnbound {
    public:
     typedef typename KnapsackWeight<Value, Count>::size_type size_type;
     typedef Value value_type;
 
     bool IsSelected() const {
       return (sack_ != 0);
-    }
-
-    size_type get_item() const {
-      return item_;
     }
 
     size_type get_sack() const {
@@ -289,32 +251,60 @@ template <class Weight, class Value,
       return value_;
     }
 
-    void Select(size_type item, size_type sack, value_type value) {
-      item_ = item;
+    void set_value(Value value) {
+      value_ = value;
+    }
+
+    void Select(size_type sack, value_type value) {
       sack_ = sack + 1;
       value_ = value;
+    }
+
+    EntryBound()
+      : sack_(0) {
+    }
+
+    explicit EntryBound(Value value)
+      : sack_(0), value_(value) {
+    }
+
+   private:
+    size_type sack_;
+    value_type value_;
+  };
+
+  class EntryUnbound : public EntryBound {
+   public:
+    typedef EntryBound super;
+    using typename super::size_type;
+    using typename super::value_type;
+
+    size_type get_item() const {
+      return item_;
+    }
+
+    void Select(size_type item, size_type sack, value_type value) {
+      item_ = item;
+      super::Select(sack, value);
     }
 
     EntryUnbound() {
     }
 
     explicit EntryUnbound(value_type value)
-      : sack_(0), value_(value) {
+      : super(value) {
     }
 
    private:
     size_type item_;
-    size_type sack_;
-    value_type value_;
   };
 
-  // A class containing all data needed only temporary for calculation.
+  // A class containing all data needed only temporarily for calculation
   class Calc {
    public:
     typedef typename SackSet::WeightList WeightList;
-    typedef typename std::unordered_map<Bound, EntryBound, Bound> BoundHash;
-    typedef typename std::unordered_map<SackSet, EntryUnbound, SackSet>
-      UnboundHash;
+    typedef typename boost::unordered_map<BoundIndex, EntryBound> BoundHash;
+    typedef typename boost::unordered_map<SackSet, EntryUnbound> UnboundHash;
     typedef typename KnapsackWeight<Value, Count>::size_type size_type;
     typedef Count count_type;
 
@@ -322,30 +312,28 @@ template <class Weight, class Value,
     BoundHash bound_hash_;
     UnboundHash unbound_hash_;
     bool have_bound_;
-    size_type first_bound_;
-    count_type first_bound_count_;
+    BoundItem bound_;
 
     explicit Calc(const WeightList& weight_list)
       : sack_set_(weight_list), have_bound_(false) {
     }
 
-    void SetBound(size_type first_bound, count_type first_bound_count) {
+    void SetBound(size_type item, count_type count) {
+      bound_ = BoundItem(item, count);
       have_bound_ = true;
-      first_bound_ = first_bound;
-      first_bound_count_ = first_bound_count;
     }
   };
 
   mutable Calc *calc_;
 
-  // Returns the first bound item index starting at i (possibly end of list)
-  size_type FirstBound(size_type i) const {
-    for (; i != super::size() ; ++i) {
-      if (super::IsBound(i)) {
-        return i;
+  // Returns the first bound item index starting at item (possibly end of list)
+  size_type FirstBound(size_type item) const {
+    for (; item != super::size() ; ++item) {
+      if (super::IsBound(item)) {
+        return item;
       }
     }
-    return i;
+    return item;
   }
 
   // Returns max according to current sack_set_,
@@ -363,30 +351,29 @@ template <class Weight, class Value,
     }
 
     // First try without using any item
-    EntryUnbound entry(calc_->have_bound_ ?
-      SolveBound(calc_->first_bound_, calc_->first_bound_count_, 0) : 0);
+    EntryUnbound entry(calc_->have_bound_ ? SolveBound() : 0);
 
     // Place each unbound item into each sack and recurse
-    for (size_type i(super::size() - 1); ; --i) {
-      if (!super::IsBound(i)) {
-        weight_type weight(weight_[i]);
-        value_type value(get_value(i));
-        for (size_type k(super::sack_size() - 1); ; --k) {
-          weight_type sackmax(sack_set.get(k));
+    for (size_type item(super::size() - 1); ; --item) {
+      if (!super::IsBound(item)) {
+        weight_type weight(weight_[item]);
+        value_type value(get_value(item));
+        for (size_type sack(super::sack_size() - 1); ; --sack) {
+          weight_type sackmax(sack_set[sack]);
           if (weight <= sackmax) {
-            sack_set.DecreaseTo(k, sackmax - weight);
+            sack_set.DecreaseTo(sack, sackmax - weight);
             value_type new_value(SolveUnbound() + value);
-            sack_set.IncreaseTo(k, sackmax);
+            sack_set.IncreaseTo(sack, sackmax);
             if (new_value > entry.get_value()) {
-              entry.Select(i, k, new_value);
+              entry.Select(item, sack, new_value);
             }
           }
-          if (k == 0) {
+          if (sack == 0) {
             break;
           }
         }
       }
-      if (i == 0) {
+      if (item == 0) {
         break;
       }
     }
@@ -396,66 +383,70 @@ template <class Weight, class Value,
     return entry.get_value();
   }
 
-  // Returns max using only bound items i, i+1, ...
-  // using item i at most c times for sack k, k+1, ...
-  // according to current sack_set_
-  // i must be the index of a bound item
-  // k must be the index of a sack
-  // c must be positive
-  value_type SolveBound(size_type i, count_type c, size_type k) const {
+  // Returns max using only bound items calc_->bound_.first or later,
+  // the first item at most calc_->bound_.second times,
+  // according to current calc_->sack_set_.
+  // It is assumed that super::sack_size() is at least 1, and moreover:
+  // calc_->bound_.first must be the index of a bound item, and
+  // calc_->bound_.second must be positive
+  value_type SolveBound() const {
     SackSet& sack_set = calc_->sack_set_;
     typename Calc::BoundHash& hash = calc_->bound_hash_;
 
     // Return cached result if possible
-    Bound bound(i, k, c, sack_set);
-    const typename Calc::BoundHash::const_iterator found(hash.find(bound));
+    BoundIndex bound_index(calc_->bound_, sack_set);
+    const typename Calc::BoundHash::const_iterator
+      found(hash.find(bound_index));
     if (found != hash.end()) {
       return found->second.get_value();
     }
 
-    // First try without using item i at sack k
-    EntryBound entry;
-    {
-      size_type tmp(k + 1);
-      if (tmp != super::sack_size()) {
-        entry.set_value(SolveBound(i, c, tmp));
-      } else if ((tmp = FirstBound(i + 1)) != super::size()) {
-        entry.set_value(SolveBound(tmp, super::get_count(tmp), 0));
-      } else {
-        entry.set_value(0);  // No recursion
+    size_type item(bound_index.get_item());
+
+    // First try without using the first item
+    bool recurse;
+    {  // prepare calc_->bound_ for the next item; set recurse if we have one
+      size_type next_item(FirstBound(item + 1));
+      if ((recurse = (next_item != super::size()))) {
+        calc_->bound_ = BoundItem(next_item, super::get_count(next_item));
       }
     }
+    EntryBound entry(recurse ? SolveBound() : 0);
 
-    // Try with item i at sack k and recurse
-    weight_type weight(weight_[i]);
-    weight_type sackmax(sack_set.get(k));
-    if (weight <= sackmax) {
-      value_type new_value(get_value(i));
-      bool recurse(true);
-      size_type recurse_i(i);
-      size_type recurse_k(k);
-      count_type recurse_c(c - 1);
-      if (recurse_c == 0) {
-        recurse_i = FirstBound(i + 1);
-        if (recurse_i != super::size()) {
-          recurse_k = 0;
-          recurse_c = super::get_count(recurse_i);
-        } else {
-          recurse = false;  // No recursion
+    // Try with current item at each sack and recurse
+    {  // Use decreased calc_->bound_.second for the next recursion if positive
+      count_type count(bound_index.get_count() - 1);
+      if (count > 0) {
+        calc_->bound_ = BoundItem(item, count);
+        recurse = true;
+      }  // else: calc_->bound_ already refers to the next item
+    }
+    weight_type weight(weight_[item]);
+    value_type value(get_value(item));
+    for (size_type sack(super::sack_size() - 1); ; --sack) {
+      weight_type sackmax(sack_set[sack]);
+      if (weight <= sackmax) {
+        if (!recurse) {  // This is the last item which can be inserted
+          entry.Select(sack, value);
+          break;  // All sacks for the last item are equally good: break loop
+        }
+        sack_set.DecreaseTo(sack, sackmax - weight);
+        value_type new_value(SolveBound() + value);
+        sack_set.IncreaseTo(sack, sackmax);
+        if (new_value > entry.get_value()) {
+          entry.Select(sack, new_value);
         }
       }
-      if (recurse) {
-        sack_set.DecreaseTo(k, sackmax - weight);
-        new_value += SolveBound(recurse_i, recurse_c, recurse_k);
-        sack_set.IncreaseTo(k, sackmax);
-      }
-      if (new_value > entry.get_value()) {
-        entry.Select(new_value);
+      if (sack == 0) {
+        break;
       }
     }
 
+    // restore data which we possibly changed for recursion
+    calc_->bound_ = bound_index.get_bound();
+
     // Cache result
-    hash[bound] = entry;
+    hash[bound_index] = entry;
     return entry.get_value();
   }
 
@@ -472,9 +463,9 @@ template <class Weight, class Value,
     }
     calc_ = new Calc(knapsack_);
     {
-      size_type i(FirstBound(0));
-      if (i != super::size()) {
-        calc_->SetBound(i, super::get_count(i));
+      size_type item(FirstBound(0));
+      if (item != super::size()) {
+        calc_->SetBound(item, super::get_count(item));
       }
     }
     value_type result(SolveUnbound());
@@ -489,41 +480,32 @@ template <class Weight, class Value,
             break;
           }
           const EntryUnbound& entry = found->second;
-          size_type i(entry.get_item());
-          size_type k(entry.get_sack());
-          ++(*sack_list)[k][i];
-          sack_set.DecreaseBy(k, weight_[i]);
+          size_type item(entry.get_item());
+          size_type sack(entry.get_sack());
+          ++(*sack_list)[sack][item];
+          sack_set.DecreaseBy(sack, weight_[item]);
         }
       }
       if (calc_->have_bound_) {  // Now the bound items
-        size_type i(calc_->first_bound_);
-        size_type c(calc_->first_bound_count_);
-        size_type k(0);
         typename Calc::BoundHash& hash = calc_->bound_hash_;
+        BoundItem& bound = calc_->bound_;
         for (;;) {
           typename Calc::BoundHash::const_iterator found(
-            hash.find(Bound(i, k, c, sack_set)));
-          if ((found == hash.end()) || !found->second.IsSelected()) {
-            if (++k != super::sack_size()) {
+            hash.find(BoundIndex(bound, sack_set)));
+          if ((found != hash.end()) && found->second.IsSelected()) {
+            size_type item(bound.first);
+            size_type sack(found->second.get_sack());
+            ++(*sack_list)[sack][item];
+            sack_set.DecreaseBy(sack, weight_[item]);
+            if (--bound.second != 0) {
               continue;
             }
-            if ((i = FirstBound(i + 1)) == super::size()) {
-              break;
-            }
-            k = 0;
-            c = super::get_count(i);
-            continue;
           }
-          ++(*sack_list)[k][i];
-          sack_set.DecreaseBy(k, weight_[i]);
-          if (--c != 0) {
-            continue;
-          }
-          if ((i == FirstBound(i + 1)) == super::size()) {
+          size_type item(FirstBound(bound.first + 1));
+          if (item == super::size()) {
             break;
           }
-          k = 0;
-          c = super::get_count(i);
+          bound = BoundItem(item, super::get_count(item));
         }
       }
     }
