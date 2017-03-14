@@ -103,12 +103,13 @@ template <class Weight, class Value,
   }
 
  private:
-  // A class which handles a vector as a multiset for hashing and comparison
+  // A class which handles a vector as sorted for hashing and comparison
   class SackSet {
    public:
     typedef typename std::multiset<Weight> WeightSet;
-    typedef typename std::vector<Weight> WeightList;
+    typedef typename KnapsackWeight<Weight, Count>::WeightList WeightList;
     typedef typename KnapsackWeight<Weight, Count>::size_type size_type;
+    typedef typename KnapsackWeight<Weight, Count>::weight_type weight_type;
 
    private:
     typedef typename WeightSet::iterator iterator;
@@ -134,6 +135,7 @@ template <class Weight, class Value,
       assign(weight_list);
     }
 
+    // Fixme: This should only take linear time but takes n log n
     void assign(const SackSet& s) {
       set_ = WeightSet();
       iterator_ = IteratorList(s.set_.size(), set_.end());
@@ -150,7 +152,7 @@ template <class Weight, class Value,
       }
     }
 
-    // Provide a Hash function
+    // Provide the hash function for the set view
     friend std::size_t hash_value(const SackSet &sack_set) {
       std::size_t seed(0);
       boost::hash_combine(seed, sack_set.set_);
@@ -167,22 +169,22 @@ template <class Weight, class Value,
     }
 
     // It is the callers responsibility to ensure that no underflow occurs
-    void DecreaseBy(size_type index, Weight subtract) {
+    void DecreaseBy(size_type index, weight_type subtract) {
       iterator& it = iterator_[index];
-      Weight old_weight(*it);
+      weight_type old_weight(*it);
       set_.erase(it);
-      it = set_.insert(static_cast<Weight>(old_weight - subtract));
+      it = set_.insert(static_cast<weight_type>(old_weight - subtract));
     }
 
-    void DecreaseTo(size_type index, Weight new_weight) {
+    void DecreaseTo(size_type index, weight_type new_weight) {
       iterator& it = iterator_[index];
       set_.erase(it);
-      it = set_.insert(static_cast<Weight>(new_weight));
+      it = set_.insert(static_cast<weight_type>(new_weight));
     }
 
-    // A separate function for possibly optimizing if multiset<Weight>
+    // A separate function for possibly optimizing if multiset<weight_type>
     // should one day obtain separate increase/decrease optimizations
-    void IncreaseTo(size_type index, Weight new_weight) {
+    void IncreaseTo(size_type index, weight_type new_weight) {
       DecreaseTo(index, new_weight);
     }
   };
