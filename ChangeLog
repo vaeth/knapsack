@@ -1,5 +1,9 @@
 # ChangeLog for knapsack
 
+*knapsack-6.1
+	Martin Väth <martin at mvath.de>:
+	- Use boost::lexical_cast instead of manual conversion
+
 *knapsack-6.0
 	Martin Väth <martin at mvath.de>:
 	- Bugfix: In some corner cases (when bound and unbound items both occur

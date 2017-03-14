@@ -6,21 +6,21 @@
 
 #include "knapsack/knapsack.h"
 
+#include <boost/program_options.hpp>  // boost::program_options
 #include <boost/algorithm/string.hpp>  // boost::split, boost::is_any_of
 #include <boost/format.hpp>  // boost::format
+#include <boost/lexical_cast.hpp>  // boost::lexical_cast
 
 #include <unistd.h>  // getopt
 
-#include <cctype>  // isdigit
 #include <cstdlib>  // exit
 #include <cstdio>  // puts, fputs, stderr, stdout
 
-#include <iostream>  // istringstream
 #include <string>
 #include <vector>
 
 
-static const char *version = "knapsack 6.0";
+static const char *version = "knapsack 6.1";
 
 using std::string;
 using std::vector;
@@ -44,9 +44,8 @@ typedef Knapsack<Integer, Float, Integer> KnapsackFloat;
 ATTRIBUTE_NORETURN inline static void Die(const string& s);
 ATTRIBUTE_NORETURN inline static void Die(const boost::format& s);
 ATTRIBUTE_NORETURN static void Die(const char *s);
-inline static Integer ParseNumber(const string& s, bool allow_zero = false);
+template<class T> T ParseNumber(const string& s, bool check_positive = true);
 static void Help();
-static Integer ParseNumber(const char *s, bool allow_zero = false);
 static KnapsackCommon *ParseOpts(int argc, char *argv[], bool *floating_point);
 
 static void Help() {
@@ -86,8 +85,17 @@ inline static void Die(const boost::format& s) {
   Die(s.str());
 }
 
-inline static Integer ParseNumber(const string& s, bool allow_zero) {
-  return ParseNumber(s.c_str(), allow_zero);
+template<class T> T ParseNumber(const string& s, bool check_positive) {
+  T result;
+  try {
+    result = boost::lexical_cast<T>(s);
+  } catch (const boost::bad_lexical_cast &e) {
+    Die(boost::format("number %s: %s") % s % e.what());
+  }
+  if (check_positive && (result <= 0)) {
+    Die(boost::format("number %s: not a positive number") % s);
+  }
+  return result;
 }
 
 int main(int argc, char *argv[]) {
@@ -105,10 +113,10 @@ int main(int argc, char *argv[]) {
       knapsack->count_.push_back(1);
     } else {
       rest = parts[1];
-      knapsack->count_.push_back(ParseNumber(parts[0], true));
+      knapsack->count_.push_back(ParseNumber<Integer>(parts[0], false));
     }
     boost::split(parts, rest, boost::is_any_of("=~#@"));
-    knapsack->weight_.push_back(ParseNumber(parts[0]));
+    knapsack->weight_.push_back(ParseNumber<Integer>(parts[0]));
     if (parts.size() <= 1) {
       if (floating_point) {
         static_cast<KnapsackFloat *>(knapsack)->value_.push_back(0);
@@ -117,16 +125,11 @@ int main(int argc, char *argv[]) {
       }
     } else {
       if (floating_point) {
-        std::istringstream is(parts[1]);
-        Float value;
-        is >> value;
-        if (value <= 0) {
-          Die(boost::format("value is not positive: %s") % value);
-        }
-        static_cast<KnapsackFloat *>(knapsack)->value_.push_back(value);
+        static_cast<KnapsackFloat *>(knapsack)->value_.push_back(
+          ParseNumber<Float>(parts[1]));
       } else {
         static_cast<KnapsackInt *>(knapsack)->value_.push_back(
-          ParseNumber(parts[1]));
+          ParseNumber<Integer>(parts[1]));
       }
     }
   }
@@ -151,10 +154,10 @@ KnapsackCommon *ParseOpts(int argc, char *argv[], bool *floating_point) {
           vector<string> parts;
           boost::split(parts, optarg, boost::is_any_of(":*xX"));
           if (parts.size() <= 1) {
-            sacks.push_back(ParseNumber(parts[0]));
+            sacks.push_back(ParseNumber<Integer>(parts[0]));
           } else {
-            sacks.insert(sacks.end(), ParseNumber(parts[0]),
-              ParseNumber(parts[1]));
+            sacks.insert(sacks.end(), ParseNumber<Integer>(parts[0]),
+              ParseNumber<Integer>(parts[1]));
           }
         }
         break;
@@ -182,27 +185,6 @@ KnapsackCommon *ParseOpts(int argc, char *argv[], bool *floating_point) {
   }
   knapsack->knapsack_ = sacks;
   return knapsack;
-}
-
-static Integer ParseNumber(const char *s, bool allow_zero) {
-  const char *ori(s);
-  Integer weight = 0;
-  if (*s == '+') {
-    ++s;
-  }
-  for (char c(*s); std::isdigit(c); c = *(++s)) {
-    Integer new_weight = (weight * 10) + static_cast<Integer>(c - '0');
-    if (new_weight <= weight) {
-      if ((weight != 0) || (c != '0')) {
-        Die(boost::format("number overflow in %s") % ori);
-      }
-    }
-    weight = new_weight;
-  }
-  if ((!allow_zero) && (weight == 0)) {
-    Die(boost::format("not a positive integer: %s") % ori);
-  }
-  return weight;
 }
 
 static void Die(const char *s) {
