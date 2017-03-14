@@ -4,6 +4,7 @@
 	Martin Väth <martin at mvath.de>:
 	- CLI: Use long options and improve description and error output
 	- CLI: Allow item specification by option (-i)
+	- internal: Sort when comparing instead of using multiset
 	- internal: Use boost::program_options
 	- internal: lexical_cast instead of manual conversion
 	- testsuite: Improve readability by using set -f

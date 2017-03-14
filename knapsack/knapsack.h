@@ -12,8 +12,8 @@
 
 #include <cstdlib>  // std::size_t
 
+#include <algorithm>  // std::sort
 #include <map>
-#include <set>
 #include <string>
 #include <utility>  // std::pair
 #include <vector>
@@ -76,6 +76,7 @@ template <class Weight, class Value,
   : public KnapsackWeight<Weight, Count> {
  public:
   typedef KnapsackWeight<Weight, Count> super;
+  using typename super::WeightList;
   using typename super::weight_type;
   using typename super::size_type;
   using typename super::count_type;
@@ -103,87 +104,52 @@ template <class Weight, class Value,
   }
 
  private:
-  // A class which handles a vector as a multiset for hashing and comparison
-  class SackSet {
+  // A class which handles a vector as sorted for hashing and comparison
+  class SackSet : public WeightList {
    public:
-    typedef typename std::multiset<Weight> WeightSet;
-    typedef typename std::vector<Weight> WeightList;
+    typedef typename KnapsackWeight<Weight, Count>::WeightList super;
     typedef typename KnapsackWeight<Weight, Count>::size_type size_type;
-
-   private:
-    typedef typename WeightSet::iterator iterator;
-    typedef typename std::vector<iterator> IteratorList;
-
-    WeightSet set_;
-    IteratorList iterator_;
+    typedef typename KnapsackWeight<Weight, Count>::weight_type weight_type;
 
    public:
     SackSet() {
     }
 
-    explicit SackSet(const SackSet& s) {
-      assign(s);
+    explicit SackSet(const super& weight_list)
+      : super(weight_list) {
     }
 
-    SackSet& operator=(const SackSet& s) {
-      assign(s);
-      return *this;
-    }
-
-    explicit SackSet(const WeightList& weight_list) {
-      assign(weight_list);
-    }
-
-    void assign(const SackSet& s) {
-      set_ = WeightSet();
-      iterator_ = IteratorList(s.set_.size(), set_.end());
-      for (size_type i(0); i < s.set_.size(); ++i) {
-        iterator_[i] = set_.insert(s[i]);
-      }
-    }
-
-    void assign(const WeightList& weight_list) {
-      set_ = WeightSet();
-      iterator_ = IteratorList(weight_list.size(), set_.end());
-      for (size_type i(0); i < weight_list.size(); ++i) {
-        iterator_[i] = set_.insert(weight_list[i]);
-      }
-    }
-
-    // Provide a Hash function
+    // Provide the hash function
     friend std::size_t hash_value(const SackSet &sack_set) {
-      std::size_t seed(0);
-      boost::hash_combine(seed, sack_set.set_);
-      return seed;
+      super sorted_list(sack_set);
+      std::sort(sorted_list.begin(), sorted_list.end());
+      return boost::hash_value(sorted_list);
     }
 
     // Provide the equal operator needed for hashing
     bool operator==(const SackSet &s) const {
-      return set_ == s.set_;
-    }
-
-    Weight operator[](size_type index) const {
-      return *iterator_[index];
+      if (super::size() != s.size()) {
+        return false;
+      }
+      super a(*this), b(s);
+      std::sort(a.begin(), a.end());
+      std::sort(b.begin(), b.end());
+      return (a == b);
     }
 
     // It is the callers responsibility to ensure that no underflow occurs
-    void DecreaseBy(size_type index, Weight subtract) {
-      iterator& it = iterator_[index];
-      Weight old_weight(*it);
-      set_.erase(it);
-      it = set_.insert(static_cast<Weight>(old_weight - subtract));
+    void DecreaseBy(size_type index, weight_type subtract) {
+      weight_type& ref = ((*this)[index]);
+      ref = static_cast<weight_type>(ref - subtract);
     }
 
-    void DecreaseTo(size_type index, Weight new_weight) {
-      iterator& it = iterator_[index];
-      set_.erase(it);
-      it = set_.insert(static_cast<Weight>(new_weight));
+    void DecreaseTo(size_type index, weight_type new_weight) {
+      (*this)[index] = new_weight;
     }
 
-    // A separate function for possibly optimizing if multiset<Weight>
-    // should one day obtain separate increase/decrease optimizations
-    void IncreaseTo(size_type index, Weight new_weight) {
-      DecreaseTo(index, new_weight);
+    // A separate function for possibly optimizing for other implementations
+    void IncreaseTo(size_type index, weight_type new_weight) {
+      (*this)[index] = new_weight;
     }
   };
 
@@ -302,7 +268,7 @@ template <class Weight, class Value,
   // A class containing all data needed only temporarily for calculation
   class Calc {
    public:
-    typedef typename SackSet::WeightList WeightList;
+    typedef typename SackSet::super WeightList;
     typedef typename boost::unordered_map<BoundIndex, EntryBound> BoundHash;
     typedef typename boost::unordered_map<SackSet, EntryUnbound> UnboundHash;
     typedef typename KnapsackWeight<Value, Count>::size_type size_type;
