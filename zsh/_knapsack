@@ -1,7 +1,8 @@
 #compdef knapsack
-_arguments -s -S -A '-*' : \
-'(* -)-h[print help]' \
-'(* -)-V[print version]' \
-'(* -)-f[values are floating point]' \
-'(* -)-s[add specified \[count\:\]sack]' \
-'*::item (\[count\:\]weight\[\=value\]):()'
+_arguments -s -S : \
+'(* -)'{'--help','-h'}'[print help]' \
+'(* -)'{'--version','-V'}'[print version]' \
+'(* -)'{'--float','-f'}'[values are floating point]' \
+'(* -)'{'--sack','-s'}'[add specified \[count\*\]sack]' \
+'(* -)'{'--item','-i'}'[add specified \[count\*\]weight\[\=value\]]' \
+'*::item (\[count\*\]weight\[\=value\]):()'

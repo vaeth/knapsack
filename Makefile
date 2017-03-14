@@ -5,11 +5,15 @@ INCLUDE_PATH=$(PREFIX)/include
 PKGINCLUDE_PATH=$(INCLUDE_PATH)/knapsack
 
 PKGCONFIG = pkg-config
+BOOST_CFLAGS = -I$(INCLUDE_PATH)
+BOOST_LIBS = -lboost_program_options-mt
+
 CPPFLAGS_EXTRA = -I.
-#CXXFLAGS_EXTRA = -std=c++11
+CXXFLAGS_EXTRA = $(BOOST_CFLAGS)
+LDFLAGS_EXTRA = $(BOOST_LIBS)
 
 ifdef WARN
-LDFLAGS_EXTRA = \
+LDFLAGS_EXTRA ::= $(LDFLAGS_EXTRA) \
 	-Wl,-z,defs \
 	-Wl,--no-undefined \
 	-Wl,--no-allow-shlib-undefined \

@@ -46,7 +46,8 @@ knapsack.cc: A simple CLI to the library.
 Requirements:
 The library needs the boost library for advanced hash functions.
 Since boost is needed anyway, also boost::format is used for convenience
-(the CLI also uses boost::split and boost::lexical_cast).
+(the CLI additionally uses boost::program_options, boost::lexical_cast, and
+boost::split).
 
 Installation:
 If the requirement is fulfilled, compilation of the CLI should be simple:

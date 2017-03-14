@@ -2,7 +2,11 @@
 
 *knapsack-6.1
 	Martin Väth <martin at mvath.de>:
-	- Use boost::lexical_cast instead of manual conversion
+	- CLI: Use long options and improve description and error output
+	- CLI: Allow item specification by option (-i)
+	- internal: Use boost::program_options
+	- internal: lexical_cast instead of manual conversion
+	- testsuite: Improve readability by using set -f
 
 *knapsack-6.0
 	Martin Väth <martin at mvath.de>:
