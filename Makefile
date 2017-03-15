@@ -75,6 +75,54 @@ CXXFLAGS_EXTRA ::= $(CXXFLAGS_EXTRA) \
 	-Wmissing-noreturn \
 	-Wunreachable-code
 endif
+ifdef OPTIMIZE
+CPPFLAGS_EXTRA ::= $(CPPFLAGS_EXTRA) \
+	-DNDEBUG \
+	-DNO_DEBUG \
+	-DG_DISABLE_ASSERT
+CXXFLAGS_EXTRA ::= $(CXXFLAGS_EXTRA) \
+	-march=native \
+	-O2 \
+	-g0 \
+	-fno-ident \
+	-fomit-frame-pointer \
+	-fno-common \
+	-ffast-math \
+	-fmerge-all-constants \
+	-ftree-partial-pre \
+	-fvect-cost-model \
+	-fgcse-sm \
+	-fgcse-las \
+	-fweb \
+	-finline-functions \
+	-fgcse-after-reload \
+	-fpredictive-commoning \
+	-fdirectives-only \
+	-ftree-switch-conversion \
+	-fira-loop-pressure \
+	-ftree-loop-distribution \
+	-ftree-loop-distribute-patterns \
+	-ftree-loop-im -fivopts \
+	-freorder-functions \
+	-fdevirtualize-speculatively \
+	-fno-semantic-interposition \
+	-frename-registers \
+	-fwhole-program \
+	-fvisibility-inlines-hidden \
+	-fno-enforce-eh-specs \
+	-fnothrow-opt
+LDFLAGS_EXTRA ::= $(LDFLAGS_EXTRA) \
+	-Wl,--hash-style=gnu \
+	-Wl,--sort-common \
+	-Wl,-O9 \
+	-Wl,--enable-new-dtags \
+	-Wl,-z,now \
+	-Wl,-z,relro \
+	-Wl,-z,noexecstack \
+	-Wl,-z,combreloc \
+	-Wl,--relax \
+	-Wl,--as-needed
+endif
 
 .PHONY: FORCE all install uninstall clean distclean maintainer-clean check
 

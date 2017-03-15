@@ -20,7 +20,7 @@
 #include <vector>
 
 
-static const char *version = "knapsack 6.1";
+static const char *version = "knapsack 6.2";
 
 using std::string;
 using std::vector;

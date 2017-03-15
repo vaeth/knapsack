@@ -1,5 +1,18 @@
 # ChangeLog for knapsack
 
+*knapsack-6.2
+	Martin Väth <martin at mvath.de>:
+	- internal: Implement SackSet without an iterator list; modification
+	  needs now twice the time, but copying is so much faster even for few
+	  sacks that this compensates. (For many sacks, copying with iterators
+	  would in addition need a logarithmic factor anyway or another
+	  constant factor due to using (or maintaining) inverse lookup.)
+	  In theory, boost:::multi_index could do the same without the
+	  modification overhead, but in practice it turned out to be slower.
+	  Also attempts to not maintain a sorted list at all (reasonable only
+	  for few sacks due to a logarithmic factor) turned out to be slower
+	  even for few sacks.
+
 *knapsack-6.1
 	Martin Väth <martin at mvath.de>:
 	- CLI: Use long options and improve description and error output
