@@ -112,21 +112,71 @@ template <class Weight, class Value,
     typedef typename KnapsackWeight<Weight, Count>::weight_type weight_type;
 
    private:
+    typedef typename WeightSet::iterator iterator;
+    typedef typename std::vector<iterator> IteratorList;
+
     WeightSet set_;
-    WeightList list_;
+    IteratorList iterator_;
 
    public:
     SackSet() {
     }
 
+    explicit SackSet(const SackSet& s) {
+      assign(s);
+    }
+
+    SackSet& operator=(const SackSet& s) {
+      assign(s);
+      return *this;
+    }
+
     explicit SackSet(const WeightList& weight_list) {
-      list_ = weight_list;
-      set_.insert(list_.begin(), list_.end());
+      assign(weight_list);
+    }
+
+    void assign(const SackSet& s) {
+      size_type size(s.set_.size());
+      iterator_ = IteratorList(size, set_.end());
+      if (size < 1024) {  // 1024 = 2^10 factor 10 for small n, see below
+        // This needs n log n time
+        set_ = WeightSet();
+        for (size_type i(0); i < size; ++i) {
+          iterator_[i] = set_.insert(s[i]);
+        }
+        return;
+      }
+      // This needs linear time, but for small n is slower by the factor 10(?)
+      set_ = s.set_;
+      // use a temporary inverse lookup list to build correct iterator_ order
+      boost::unordered_map<const weight_type *, size_type> get_index;
+      size_type curr_index(0);
+      for (typename IteratorList::const_iterator it(s.iterator_.begin());
+        ; ++it) {
+        get_index[&(**it)] = curr_index;
+        if (++curr_index == size) {
+          break;
+        }
+      }
+      for (typename WeightSet::iterator dest(set_.begin()),
+        source(s.set_.begin()); dest != set_.end(); ++dest, ++source) {
+        iterator_[get_index[&(*source)]] = dest;
+      }
+    }
+
+    void assign(const WeightList& weight_list) {
+      set_ = WeightSet();
+      iterator_ = IteratorList(weight_list.size(), set_.end());
+      for (size_type i(0); i < weight_list.size(); ++i) {
+        iterator_[i] = set_.insert(weight_list[i]);
+      }
     }
 
     // Provide the hash function for the sorted view
     friend std::size_t hash_value(const SackSet &sack_set) {
-      return boost::hash_value(sack_set.set_);
+      std::size_t seed(0);
+      boost::hash_combine(seed, sack_set.set_);
+      return seed;
     }
 
     // Provide the equal operator needed for hashing
@@ -135,21 +185,21 @@ template <class Weight, class Value,
     }
 
     Weight operator[](size_type index) const {
-      return list_[index];
+      return (*iterator_)[index];
     }
 
     // It is the caller's responsibility to ensure that no underflow occurs
     void DecreaseBy(size_type index, weight_type subtract) {
-      Weight *p(&(list_[index]));
-      weight_type weight(*p);
-      set_.erase(set_.find(weight));
-      set_.insert((*p = static_cast<weight_type>(weight - subtract)));
+      iterator& it = iterator_[index];
+      weight_type old_weight(*it);
+      set_.erase(it);
+      it = set_.insert(static_cast<weight_type>(old_weight - subtract));
     }
 
     void DecreaseTo(size_type index, weight_type new_weight) {
-      Weight *p(&(list_[index]));
-      set_.erase(set_.find(*p));
-      set_.insert((*p = new_weight));
+      iterator& it = iterator_[index];
+      set_.erase(it);
+      it = set_.insert(static_cast<weight_type>(new_weight));
     }
 
     // A separate function for possibly optimizing a different implementation
