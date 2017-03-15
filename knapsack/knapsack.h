@@ -8,6 +8,10 @@
 #define KNAPSACK_KNAPSACK_H_ 1
 
 #include <boost/format.hpp>  // boost::format
+#include <boost/multi_index/identity.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/random_access_index.hpp>
+#include <boost/multi_index_container.hpp>
 #include <boost/unordered_map.hpp>  // boost::unordered_map and hash stuff
 
 #include <cstdlib>  // std::size_t
@@ -103,58 +107,70 @@ template <class Weight, class Value,
   }
 
  private:
-  // A class which handles a vector as sorted for hashing and comparison
-  class SackSet {
+  // A class which treats a vector<weight_type> as sorted
+  // for hashing and equality comparison
+
+  typedef boost::multi_index::multi_index_container<
+      weight_type,
+      boost::multi_index::indexed_by<
+        boost::multi_index::random_access<>,
+        boost::multi_index::ordered_non_unique<
+          boost::multi_index::identity<weight_type>
+        >
+      >
+    > VectorSet;  // Full data, treated as vector
+  typedef typename VectorSet::template nth_index<1>::type VectorSetSorted;
+    // sorted view
+
+  class SackSet : public VectorSet {
    public:
-    typedef typename std::multiset<Weight> WeightSet;
-    typedef typename KnapsackWeight<Weight, Count>::WeightList WeightList;
+    typedef typename Knapsack<Weight, Value, Count>::VectorSet super;
+    typedef typename Knapsack<Weight, Value, Count>::VectorSetSorted
+      VectorSetSorted;
     typedef typename KnapsackWeight<Weight, Count>::size_type size_type;
     typedef typename KnapsackWeight<Weight, Count>::weight_type weight_type;
+    typedef typename KnapsackWeight<Weight, Count>::WeightList WeightList;
 
-   private:
-    WeightSet set_;
-    WeightList list_;
-
-   public:
     SackSet() {
     }
 
     explicit SackSet(const WeightList& weight_list) {
-      list_ = weight_list;
-      set_.insert(list_.begin(), list_.end());
+      super::insert(super::end(), weight_list.begin(), weight_list.end());
     }
 
-    // Provide the hash function for the sorted view
+    const VectorSetSorted& AsVectorSetSorted() const {
+      return super::template get<1>();
+    }
+
+    // Provide a hash function using only the sorted vector
     friend std::size_t hash_value(const SackSet &sack_set) {
-      return boost::hash_value(sack_set.set_);
+      const VectorSetSorted& as_sorted = sack_set.AsVectorSetSorted();
+      size_t seed(0);
+      for (typename VectorSetSorted::const_iterator it(as_sorted.begin());
+        it != as_sorted.end(); ++it) {
+        boost::hash_combine(seed, *it);
+      }
+      return seed;
     }
 
-    // Provide the equal operator needed for hashing
+    // Equality refers only to the sorted vector (needed for hashing)
     bool operator==(const SackSet &s) const {
-      return (set_ == s.set_);
-    }
-
-    Weight operator[](size_type index) const {
-      return list_[index];
+      return (AsVectorSetSorted() == s.AsVectorSetSorted());
     }
 
     // It is the caller's responsibility to ensure that no underflow occurs
     void DecreaseBy(size_type index, weight_type subtract) {
-      Weight *p(&(list_[index]));
-      weight_type weight(*p);
-      set_.erase(set_.find(weight));
-      set_.insert((*p = static_cast<weight_type>(weight - subtract)));
+      typename super::iterator it(super::begin() + index);
+      super::replace(it, static_cast<weight_type>(*it - subtract));
     }
 
     void DecreaseTo(size_type index, weight_type new_weight) {
-      Weight *p(&(list_[index]));
-      set_.erase(set_.find(*p));
-      set_.insert((*p = new_weight));
+      super::replace(super::begin() + index, new_weight);
     }
 
     // A separate function for possibly optimizing a different implementation
     void IncreaseTo(size_type index, weight_type new_weight) {
-      DecreaseTo(index, new_weight);
+      super::replace(super::begin() + index, new_weight);
     }
   };
 
