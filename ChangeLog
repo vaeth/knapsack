@@ -1,5 +1,13 @@
 # ChangeLog for knapsack
 
+*knapsack-6.3
+	Martin Väth <martin at mvath.de>:
+	- internal: Avoid SackSet altogether. Use only one static iterator list
+	  (in Calc) which is never copied. This way the hash stores less
+	  redundant data which saves memory and time. The only redundancy
+	  stored in the hash now is the tree structure from the set; avoiding
+	  that would increase time for modification from logarithmic to linear.
+
 *knapsack-6.2
 	Martin Väth <martin at mvath.de>:
 	- internal: Implement SackSet without an iterator list; modification

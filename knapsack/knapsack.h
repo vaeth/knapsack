@@ -103,60 +103,7 @@ template <class Weight, class Value,
   }
 
  private:
-  // A class which handles a vector as sorted for hashing and comparison
-  class SackSet {
-   public:
-    typedef typename std::multiset<Weight> WeightSet;
-    typedef typename KnapsackWeight<Weight, Count>::WeightList WeightList;
-    typedef typename KnapsackWeight<Weight, Count>::size_type size_type;
-    typedef typename KnapsackWeight<Weight, Count>::weight_type weight_type;
-
-   private:
-    WeightSet set_;
-    WeightList list_;
-
-   public:
-    SackSet() {
-    }
-
-    explicit SackSet(const WeightList& weight_list) {
-      list_ = weight_list;
-      set_.insert(list_.begin(), list_.end());
-    }
-
-    // Provide the hash function for the sorted view
-    friend std::size_t hash_value(const SackSet &sack_set) {
-      return boost::hash_value(sack_set.set_);
-    }
-
-    // Provide the equal operator needed for hashing
-    bool operator==(const SackSet &s) const {
-      return (set_ == s.set_);
-    }
-
-    Weight operator[](size_type index) const {
-      return list_[index];
-    }
-
-    // It is the caller's responsibility to ensure that no underflow occurs
-    void DecreaseBy(size_type index, weight_type subtract) {
-      Weight *p(&(list_[index]));
-      weight_type weight(*p);
-      set_.erase(set_.find(weight));
-      set_.insert((*p = static_cast<weight_type>(weight - subtract)));
-    }
-
-    void DecreaseTo(size_type index, weight_type new_weight) {
-      Weight *p(&(list_[index]));
-      set_.erase(set_.find(*p));
-      set_.insert((*p = new_weight));
-    }
-
-    // A separate function for possibly optimizing a different implementation
-    void IncreaseTo(size_type index, weight_type new_weight) {
-      DecreaseTo(index, new_weight);
-    }
-  };
+  typedef typename std::multiset<Weight> WeightSet;
 
   // A class containing all data of bound items:
   // item (first) and its count (second)
@@ -168,15 +115,16 @@ template <class Weight, class Value,
     typedef typename Knapsack<Weight, Value, Count>::BoundItem BoundItem;
     typedef typename KnapsackWeight<Weight, Count>::size_type size_type;
     typedef typename KnapsackWeight<Weight, Count>::count_type count_type;
+    typedef typename Knapsack<Weight, Value, Count>::WeightSet WeightSet;
 
     BoundItem bound_item_;
-    SackSet sack_set_;
+    WeightSet sack_set_;
 
-    BoundIndex(const BoundItem& bound_item, const SackSet& sack_set)
+    BoundIndex(const BoundItem& bound_item, const WeightSet& sack_set)
       : bound_item_(bound_item), sack_set_(sack_set) {
     }
 
-    void assign(const BoundItem& bound_item, const SackSet& sack_set) {
+    void assign(const BoundItem& bound_item, const WeightSet& sack_set) {
       bound_item_ = bound_item;
       sack_set_ = sack_set;
     }
@@ -207,7 +155,7 @@ template <class Weight, class Value,
 
   class EntryBound {
    public:
-    typedef typename KnapsackWeight<Value, Count>::size_type size_type;
+    typedef typename KnapsackWeight<Weight, Count>::size_type size_type;
     typedef Value value_type;
 
     bool IsSelected() const {
@@ -273,29 +221,69 @@ template <class Weight, class Value,
   // A class containing all data needed only temporarily for calculation
   class Calc {
    public:
-    typedef typename SackSet::WeightList WeightList;
+    typedef typename Knapsack<Weight, Value, Count>::WeightSet WeightSet;
     typedef typename boost::unordered_map<BoundIndex, EntryBound> BoundHash;
-    typedef typename boost::unordered_map<SackSet, EntryUnbound> UnboundHash;
-    typedef typename KnapsackWeight<Value, Count>::size_type size_type;
-    typedef Count count_type;
+    typedef typename boost::unordered_map<WeightSet, EntryUnbound> UnboundHash;
+    typedef typename KnapsackWeight<Weight, Count>::size_type size_type;
+    typedef typename KnapsackWeight<Weight, Count>::count_type count_type;
+    typedef typename KnapsackWeight<Weight, Count>::WeightList WeightList;
 
-    SackSet sack_set_;
+    WeightSet sack_set_;
     BoundHash bound_hash_;
     UnboundHash unbound_hash_;
     bool have_bound_;
     BoundItem bound_;
 
+   private:
+    typedef typename WeightSet::iterator Iterator;
+    typedef std::vector<Iterator> IteratorList;
+    IteratorList iterator_;
+
+    // This class is only meant to be used statically:
+    Calc() {}
+    Calc(const Calc&) {}
+    Calc& operator=(const Calc&) {}
+
+   public:
     explicit Calc(const WeightList& weight_list)
-      : sack_set_(weight_list), have_bound_(false) {
+      : have_bound_(false) {
+      iterator_ = IteratorList(weight_list.size(), sack_set_.end());
+      typename WeightList::const_iterator sit(weight_list.begin());
+      for (typename IteratorList::iterator it(iterator_.begin()),
+        it_end(iterator_.end()); it != it_end; ++it, ++sit) {
+        *it = sack_set_.insert(*sit);
+      }
     }
 
     void SetBound(size_type item, count_type count) {
       bound_ = BoundItem(item, count);
       have_bound_ = true;
     }
-  };
 
-  mutable Calc *calc_;
+    weight_type SackMax(size_type index) const {
+      return *iterator_[index];
+    }
+
+    // It is the caller's responsibility to ensure that no underflow occurs
+    void DecreaseBy(size_type index, weight_type subtract) {
+      Iterator *it_pointer(&(iterator_[index]));
+      Iterator it(*it_pointer);
+      weight_type new_weight(static_cast<weight_type>(*it - subtract));
+      sack_set_.erase(it);
+      *it_pointer = sack_set_.insert(new_weight);
+    }
+
+    void DecreaseTo(size_type index, weight_type new_weight) {
+      Iterator& it_reference = iterator_[index];
+      sack_set_.erase(it_reference);
+      it_reference = sack_set_.insert(new_weight);
+    }
+
+    // A separate function for possibly optimizing a different implementation
+    void IncreaseTo(size_type index, weight_type new_weight) {
+      DecreaseTo(index, new_weight);
+    }
+  };
 
   // Returns the first bound item index starting at item (possibly end of list)
   size_type FirstBound(size_type item) const {
@@ -307,22 +295,22 @@ template <class Weight, class Value,
     return item;
   }
 
-  // Returns max according to current sack_set_,
+  // Returns max according to calc->sack_set_,
   // assuming no bound item has been used.
   // It is assumed that super::size() and super::sack_size() are at least 1
-  value_type SolveUnbound() const {
-    SackSet& sack_set = calc_->sack_set_;
-    typename Calc::UnboundHash& hash = calc_->unbound_hash_;
+  value_type SolveUnbound(Calc *calc) const {
+    WeightSet& sack_set = calc->sack_set_;
+    typename Calc::UnboundHash& hash = calc->unbound_hash_;
 
     // Return cached result if possible
     const typename Calc::UnboundHash::const_iterator
-      found(hash.find(sack_set));
+      found(hash.find(calc->sack_set_));
     if (found != hash.end()) {
       return found->second.get_value();
     }
 
     // First try without using any item
-    EntryUnbound entry(calc_->have_bound_ ? SolveBound() : 0);
+    EntryUnbound entry(calc->have_bound_ ? SolveBound(calc) : 0);
 
     // Place each unbound item into each sack and recurse
     for (size_type item(super::size() - 1); ; --item) {
@@ -330,11 +318,11 @@ template <class Weight, class Value,
         weight_type weight(weight_[item]);
         value_type value(get_value(item));
         for (size_type sack(super::sack_size() - 1); ; --sack) {
-          weight_type sackmax(sack_set[sack]);
+          weight_type sackmax(calc->SackMax(sack));
           if (weight <= sackmax) {
-            sack_set.DecreaseTo(sack, sackmax - weight);
-            value_type new_value(SolveUnbound() + value);
-            sack_set.IncreaseTo(sack, sackmax);
+            calc->DecreaseTo(sack, sackmax - weight);
+            value_type new_value(SolveUnbound(calc) + value);
+            calc->IncreaseTo(sack, sackmax);
             if (new_value > entry.get_value()) {
               entry.Select(item, sack, new_value);
             }
@@ -354,18 +342,17 @@ template <class Weight, class Value,
     return entry.get_value();
   }
 
-  // Returns max using only bound items calc_->bound_.first or later,
-  // the first item at most calc_->bound_.second times,
-  // according to current calc_->sack_set_.
+  // Returns max using only bound items calc->bound_.first or later,
+  // the first item at most calc->bound_.second times,
+  // according to current calc->sack_set_.
   // It is assumed that super::sack_size() is at least 1, and moreover:
-  // calc_->bound_.first must be the index of a bound item, and
-  // calc_->bound_.second must be positive
-  value_type SolveBound() const {
-    SackSet& sack_set = calc_->sack_set_;
-    typename Calc::BoundHash& hash = calc_->bound_hash_;
+  // calc->bound_.first must be the index of a bound item, and
+  // calc->bound_.second must be positive
+  value_type SolveBound(Calc *calc) const {
+    typename Calc::BoundHash& hash = calc->bound_hash_;
 
     // Return cached result if possible
-    BoundIndex bound_index(calc_->bound_, sack_set);
+    BoundIndex bound_index(calc->bound_, calc->sack_set_);
     const typename Calc::BoundHash::const_iterator
       found(hash.find(bound_index));
     if (found != hash.end()) {
@@ -376,34 +363,34 @@ template <class Weight, class Value,
 
     // First try without using the first item
     bool recurse;
-    {  // prepare calc_->bound_ for the next item; set recurse if we have one
+    {  // prepare calc->bound_ for the next item; set recurse if we have one
       size_type next_item(FirstBound(item + 1));
       if ((recurse = (next_item != super::size()))) {
-        calc_->bound_ = BoundItem(next_item, super::get_count(next_item));
+        calc->bound_ = BoundItem(next_item, super::get_count(next_item));
       }
     }
-    EntryBound entry(recurse ? SolveBound() : 0);
+    EntryBound entry(recurse ? SolveBound(calc) : 0);
 
     // Try with current item at each sack and recurse
-    {  // Use decreased calc_->bound_.second for the next recursion if positive
+    {  // Use decreased calc->bound_.second for the next recursion if positive
       count_type count(bound_index.get_count() - 1);
       if (count > 0) {
-        calc_->bound_ = BoundItem(item, count);
+        calc->bound_ = BoundItem(item, count);
         recurse = true;
-      }  // else: calc_->bound_ already refers to the next item
+      }  // else: calc->bound_ already refers to the next item
     }
     weight_type weight(weight_[item]);
     value_type value(get_value(item));
     for (size_type sack(super::sack_size() - 1); ; --sack) {
-      weight_type sackmax(sack_set[sack]);
+      weight_type sackmax(calc->SackMax(sack));
       if (weight <= sackmax) {
         if (!recurse) {  // This is the last item which can be inserted
           entry.Select(sack, value);
           break;  // All sacks for the last item are equally good: break loop
         }
-        sack_set.DecreaseTo(sack, sackmax - weight);
-        value_type new_value(SolveBound() + value);
-        sack_set.IncreaseTo(sack, sackmax);
+        calc->DecreaseTo(sack, sackmax - weight);
+        value_type new_value(SolveBound(calc) + value);
+        calc->IncreaseTo(sack, sackmax);
         if (new_value > entry.get_value()) {
           entry.Select(sack, new_value);
         }
@@ -414,7 +401,7 @@ template <class Weight, class Value,
     }
 
     // restore data which we possibly changed for recursion
-    calc_->bound_ = bound_index.get_bound();
+    calc->bound_ = bound_index.get_bound();
 
     // Cache result
     hash[bound_index] = entry;
@@ -432,20 +419,21 @@ template <class Weight, class Value,
     if (super::empty() || super::sack_empty()) {
       return 0;
     }
-    calc_ = new Calc(knapsack_);
+    Calc calc(knapsack_);
     {
       size_type item(FirstBound(0));
       if (item != super::size()) {
-        calc_->SetBound(item, super::get_count(item));
+        calc.SetBound(item, super::get_count(item));
       }
     }
-    value_type result(SolveUnbound());
+    value_type result(SolveUnbound(&calc));
     if (sack_list) {
-      SackSet& sack_set = calc_->sack_set_;
-      typename Calc::UnboundHash& unbound_hash = calc_->unbound_hash_;
-      typename Calc::BoundHash& bound_hash = calc_->bound_hash_;
-      bool have_bound(calc_->have_bound_);
-      BoundItem bound(calc_->bound_);
+      typename Calc::BoundHash::const_iterator
+        bound_end(calc.bound_hash_.end());
+      typename Calc::UnboundHash::const_iterator
+        unbound_end(calc.unbound_hash_.end());
+      bool have_bound(calc.have_bound_);
+      BoundItem bound(calc.bound_);
       // bound and unbound items might be wildly mixed in the hashes:
       // We start with all unbound (since this is likely the first) as long as
       // we find, then all bound as long as we find, then again all unbound
@@ -456,8 +444,8 @@ template <class Weight, class Value,
         if (found_bound) {  // bound search succeeded or we are in first round
           for (;;) {  // search/update according to unbound_hash
             typename Calc::UnboundHash::const_iterator
-              found(unbound_hash.find(sack_set));
-            if ((found == unbound_hash.end()) || !found->second.IsSelected()) {
+              found(calc.unbound_hash_.find(calc.sack_set_));
+            if ((found == unbound_end) || !found->second.IsSelected()) {
               break;
             }
             found_unbound = true;
@@ -465,7 +453,7 @@ template <class Weight, class Value,
             size_type item(entry.get_item());
             size_type sack(entry.get_sack());
             ++(*sack_list)[sack][item];
-            sack_set.DecreaseBy(sack, weight_[item]);
+            calc.DecreaseBy(sack, weight_[item]);
           }
         }
         if (!have_bound) {
@@ -482,15 +470,15 @@ template <class Weight, class Value,
         found_bound = false;
         for (;;) {  // search/update according to bound_hash
           typename Calc::BoundHash::const_iterator found(
-            bound_hash.find(BoundIndex(bound, sack_set)));
-          if ((found == bound_hash.end()) || !found->second.IsSelected()) {
+            calc.bound_hash_.find(BoundIndex(bound, calc.sack_set_)));
+          if ((found == bound_end) || !found->second.IsSelected()) {
             break;
           }
           found_bound = true;
           size_type item(bound.first);
           size_type sack(found->second.get_sack());
           ++(*sack_list)[sack][item];
-          sack_set.DecreaseBy(sack, weight_[item]);
+          calc.DecreaseBy(sack, weight_[item]);
           if (--bound.second == 0) {  // Update bound resources
             size_type i(FirstBound(bound.first + 1));
             if (i == super::size()) {  // search for bound items is finished
@@ -502,7 +490,6 @@ template <class Weight, class Value,
         }
       }
     }
-    delete calc_;
     return result;
   }
 
