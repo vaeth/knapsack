@@ -2,7 +2,9 @@
 _arguments -s -S : \
 '(* -)'{'--help','-h'}'[print help]' \
 '(* -)'{'--version','-V'}'[print version]' \
-'(* -)'{'--float','-f'}'[values are floating point]' \
-'(* -)'{'--sack','-s'}'[add specified \[count\*\]sack]' \
-'(* -)'{'--item','-i'}'[add specified \[count\*\]weight\[\=value\]]' \
-'*::item (\[count\*\]weight\[\=value\]):()'
+{'--quiet','-q'}'[quiet - no warnings about items]' \
+{'--force','-F'}'[take all items as given by the arguments]' \
+{'--float','-f'}'[values are floating point]' \
+{'--sack=','-s+'}'[add specified \[count\*\]sack]:sack ([count*]capacity):()' \
+{'--item=','-i+'}'[add specified \[count\*\]weight\[\=value\]]:item ([count*]weight[=value]):()' \
+'*::item ([count*]weight[=value]):()'

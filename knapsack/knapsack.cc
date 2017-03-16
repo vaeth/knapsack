@@ -20,7 +20,7 @@
 #include <vector>
 
 
-static const char *version = "knapsack 6.2";
+static const char *version = "knapsack 7.0";
 
 using std::string;
 using std::vector;
@@ -41,11 +41,13 @@ typedef KnapsackWeight<Integer, Integer> KnapsackCommon;
 typedef Knapsack<Integer, Integer, Integer> KnapsackInt;
 typedef Knapsack<Integer, Float, Integer> KnapsackFloat;
 
-void Help(const boost::program_options::options_description& options);
+static void Help(const boost::program_options::options_description& options);
+template<class T> void Warn(T s);
 template<class T> ATTRIBUTE_NORETURN void Die(T s);
 template<class T> T ParseNumber(const string& s, bool check_positive = true);
+static Integer CountMax(const KnapsackCommon& sack, Integer weight);
 
-void Help(const boost::program_options::options_description& options) {
+static void Help(const boost::program_options::options_description& options) {
   std::puts((boost::format("Usage: knapsack [options] [item item ...]\n"
 "The input must specify items (by specifying their weight and value, and how\n"
 "often each item is available) and one or several knapsacks (by specifying\n"
@@ -66,7 +68,15 @@ void Help(const boost::program_options::options_description& options) {
 "\n"
 "knapsacks can be specified with option -s, items with option -i or also\n"
 "simply as arguments on the command line (see option -i below for details.)\n"
+"If there is no item which can be put into a knapsack, the program exits\n"
+"with nonzero error status and an error message; otherwise the program prints\n"
+"a solution with maximal value and returns with zero error status, unless it\n"
+"runs out of memory.\n"
 "\n%s\n") % options).str().c_str());
+}
+
+template<class T> ATTRIBUTE_NORETURN void Warn(T s) {
+  fputs((boost::format("knapsack: warning: %s\n") % s).str().c_str(), stderr);
 }
 
 template<class T> ATTRIBUTE_NORETURN void Die(T s) {
@@ -88,6 +98,16 @@ template<class T> T ParseNumber(const string& s, bool check_positive) {
   return result;
 }
 
+static Integer CountMax(const KnapsackCommon& sack, Integer weight) {
+  Integer count_max(0);
+  const KnapsackCommon::WeightList& sacks = sack.knapsack_;
+  for (KnapsackCommon::WeightList::const_iterator it(sacks.begin()),
+    end(sacks.end()); it != end; ++it) {
+    count_max += (*it) / weight;
+  }
+  return count_max;
+}
+
 int main(int argc, char *argv[]) {
   boost::program_options::options_description options("Options");
   options.add_options()
@@ -104,13 +124,21 @@ int main(int argc, char *argv[]) {
       "If N is omitted, it defaults to 1. If value is omitted or not positive "
       "then the value of the item defaults to its weight.\n"
       "The case N=0 means that the availability of this items is unbound; "
-      "this case will be treated much more efficiently than large finite N.\n"
-      "The symbol * can also be replaced by : or x or X. The symbol = "
-      "can also be replaced by ~ or # or @.")
+      "this case is treated more efficiently than bound availability. "
+      "(This efficient case is automatically selected if N is so large that "
+      "the knapsacks cannot carry more than N times this item only.)\n"
+      "The symbol * can be replaced by : or x or X, and the symbol = "
+      "can be replaced by ~ or # or @.")
     ("float,f", "values of items can be fractional (floating point) numbers.\n"
       "Without this option, all values must be integer numbers. "
       "With this option, the result might be wrong due to (accumulative) "
       "rounding errors which are ignored by the algorithm.")
+    ("quiet,q", "do not print warnings about ignored items/modified N")
+    ("force,F", "use items as specified on the command line, even if they are "
+      "too heavy to fit anywhere or if some number could be treated as "
+      "unbound more effficiently. This serves mainly for debugging purposes, "
+      "but it could also be that a different solution is found with this "
+      "option if several optimal solutions do exist")
     ("version,V", "output the version number and exit")
     ("help,h", "output help text and exit");
   boost::program_options::positional_options_description positional;
@@ -132,13 +160,12 @@ int main(int argc, char *argv[]) {
     Help(options);
     std::exit(EXIT_SUCCESS);
   }
-  bool floating_point;
+  bool warn(!option_map.count("quiet"));
+  bool floating_point(option_map.count("float"));
   KnapsackCommon *knapsack;
-  if (option_map.count("float")) {
-    floating_point = true;
+  if (floating_point) {
     knapsack = new KnapsackFloat;
   } else {
-    floating_point = false;
     knapsack = new KnapsackInt;
   }
   if (option_map.count("sack")) {
@@ -166,15 +193,34 @@ int main(int argc, char *argv[]) {
       vector<string> parts;
       boost::split(parts, *it, boost::is_any_of(":*xX \t\r\n"));
       string rest;
+      Integer count;
       if (parts.size() <= 1) {
         rest = parts[0];
-        knapsack->count_.push_back(1);
+        count = 1;
       } else {
         rest = parts[1];
-        knapsack->count_.push_back(ParseNumber<Integer>(parts[0], false));
+        count = ParseNumber<Integer>(parts[0], false);
       }
       boost::split(parts, rest, boost::is_any_of("=~#@"));
-      knapsack->weight_.push_back(ParseNumber<Integer>(parts[0]));
+      Integer weight(ParseNumber<Integer>(parts[0]));
+      if (!option_map.count("force")) {
+        Integer count_max(CountMax(*knapsack, weight));
+        if (count_max <= 0) {
+          if (warn) {
+            Warn(boost::format("ignoring too heavy item %s") % *it);
+          }
+          continue;
+        }
+        if (count >= count_max) {
+          if (warn) {
+            Warn(boost::format("treating item %s as unbound (N=0) "
+              "for efficiency") % *it);
+          }
+          count = 0;
+        }
+      }
+      knapsack->count_.push_back(count);
+      knapsack->weight_.push_back(weight);
       if (parts.size() <= 1) {
         if (floating_point) {
           static_cast<KnapsackFloat *>(knapsack)->value_.push_back(0);
@@ -193,7 +239,7 @@ int main(int argc, char *argv[]) {
     }
   }
   if (knapsack->empty()) {
-    Die("at least one item must be specified, e.g. on the command line");
+    Die("at least one not too heavy item must be specified");
   }
   string result;
   knapsack->SolveAppend(&result);

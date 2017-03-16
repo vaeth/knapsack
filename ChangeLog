@@ -1,7 +1,12 @@
 # ChangeLog for knapsack
 
-*knapsack-6.3
+*knapsack-7.0
 	Martin Väth <martin at mvath.de>:
+	- CLI: Select unbound case (and print a warning) if possible
+	- CLI: Omit too heavy items immediately
+	- CLI: Add option -q/--quiet to suppress the warnings
+	- CLI: Add option -F/--force to suppress the omission/unbound selection
+	- Fix zsh completion
 	- internal: Avoid SackSet altogether. Use only one static iterator list
 	  (in Calc) which is never copied. This way the hash stores less
 	  redundant data which saves memory and time. The only redundancy
