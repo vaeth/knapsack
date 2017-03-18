@@ -1,5 +1,11 @@
 # ChangeLog for knapsack
 
+*knapsack-7.1
+	Martin Väth <martin at mvath.de>:
+	- Makefile: add switch CLANG=1
+	- testsuite: output time
+	- internal: option parsing cleanup
+
 *knapsack-7.0
 	Martin Väth <martin at mvath.de>:
 	- CLI: Select unbound case (and print a warning) if possible

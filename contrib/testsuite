@@ -21,6 +21,7 @@ Check() {
 	[ "$result" = "$*" ] || Fatal "failure: result should be
 $*"
 }
+time_begin=`date '+%s' 2>/dev/null` || time_begin=
 Test -s3*2 -s2 -s2 -s3 -s4 0*2
 Check '16
 2|2: 2
@@ -109,3 +110,8 @@ Check '176.2
 98(64.6)|100: 5*1=5(5*1.2=6) 2*17=34(2*3.5=7) 51 8(0.6)
 100(55.8)|100: 1(1.2) 51 6*8=48(6*0.6=3.6)
 100(55.8)|100: 1(1.2) 51 6*8=48(6*0.6=3.6)'
+[ -n "${time_begin:++}" ] || exit 0
+time_end=`date '+%s' 2>/dev/null` || time_end=
+[ -n "${time_end:++}" ] || exit 0
+time_diff=$(( $time_end - $time_begin ))
+echo "Time needed: $time_diff seconds"

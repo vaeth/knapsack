@@ -12,6 +12,10 @@ CPPFLAGS_EXTRA = -I.
 CXXFLAGS_EXTRA = $(BOOST_CFLAGS)
 LDFLAGS_EXTRA = $(BOOST_LIBS)
 
+ifdef CLANG
+CXX ::= $(shell PATH=$${PATH-}$${PATH:+:}/usr/lib/llvm/*/bin \
+	command -v clang++ 2>/dev/null || echo $(CXX))
+endif
 ifdef WARN
 LDFLAGS_EXTRA ::= $(LDFLAGS_EXTRA) \
 	-Wl,-z,defs \
