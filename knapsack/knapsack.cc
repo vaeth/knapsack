@@ -19,23 +19,22 @@
 #include <string>
 #include <vector>
 
-
-static const char *version = "knapsack 7.1";
-
-using std::string;
-using std::vector;
-
 // Use largest unsigned integers/floats available:
 
-typedef long double Float;
-
 #if __cplusplus >= 201103L
-typedef unsigned long long Integer;  // NOLINT(runtime/int)
+#include <cstdint>
+typedef std::uintmax_t Integer;
 #define ATTRIBUTE_NORETURN [[noreturn]]  // NOLINT(whitespace/braces)
 #else
 typedef unsigned long Integer;  // NOLINT(runtime/int)
 #define ATTRIBUTE_NORETURN
 #endif
+typedef long double Float;
+
+static const char *version = "knapsack 7.2";
+
+using std::string;
+using std::vector;
 
 typedef KnapsackWeight<Integer, Integer> KnapsackCommon;
 typedef Knapsack<Integer, Integer, Integer> KnapsackInt;
@@ -78,11 +77,11 @@ static void Help(const boost::program_options::options_description& options) {
 "\n%s\n") % options).str().c_str());
 }
 
-template<class T> ATTRIBUTE_NORETURN void Warn(T s) {
+template<class T> void Warn(T s) {
   fputs((boost::format("knapsack: warning: %s\n") % s).str().c_str(), stderr);
 }
 
-template<class T> ATTRIBUTE_NORETURN void Die(T s) {
+template<class T> void Die(T s) {
   fputs((boost::format("knapsack: %s\nType knapsack -h for help\n") % s)
     .str().c_str(), stderr);
   std::exit(EXIT_FAILURE);
@@ -253,5 +252,5 @@ int main(int argc, char *argv[]) {
   knapsack->SolveAppend(&result);
   delete knapsack;
   fputs(result.c_str(), stdout);
-  return 0;
+  return EXIT_SUCCESS;
 }

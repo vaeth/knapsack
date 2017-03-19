@@ -1,5 +1,12 @@
 # ChangeLog for knapsack
 
+*knapsack-7.2
+	Martin Väth <martin at mvath.de>:
+	- Use std::uintmax_t if available
+	- Fix usage of [[noreturn]]
+	- Makefile: Use C++-14 when optimizing
+	- Makefile: More systematic OPTIMIZE/WARN with clang and/or gcc
+
 *knapsack-7.1
 	Martin Väth <martin at mvath.de>:
 	- Makefile: add switch CLANG=1
