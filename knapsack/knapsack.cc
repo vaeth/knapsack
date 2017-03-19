@@ -16,6 +16,7 @@
 #include <cstdlib>  // exit
 #include <cstdio>  // puts, fputs, stderr, stdout
 
+#include <exception>
 #include <string>
 #include <vector>
 
@@ -31,7 +32,7 @@ typedef unsigned long Integer;  // NOLINT(runtime/int)
 #endif
 typedef long double Float;
 
-static const char *version = "knapsack 7.2";
+static const char *version = "knapsack 7.2.1";
 
 using std::string;
 using std::vector;
@@ -91,7 +92,7 @@ template<class T> T ParseNumber(const string& s, bool check_positive) {
   T result;
   try {
     result = boost::lexical_cast<T>(s);
-  } catch (const boost::bad_lexical_cast &e) {
+  } catch (const boost::bad_lexical_cast& e) {
     Die(boost::format("number %s: %s") % s % e.what());
   }
   if (check_positive && (result <= 0)) {
