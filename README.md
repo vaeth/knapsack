@@ -1,6 +1,8 @@
-knapsack - A fast solver for the 0/1-knapsack problem with multiple knapsacks
+# knapsack
 
-(C) Martin Väth <martin@mvath.de>
+A fast solver for the 0/1-knapsack problem with multiple knapsacks
+
+(C) Martin Väth (martin at mvath.de)-
 This project is distributed under the terms of the
 GNU General Public License v2.
 
@@ -32,32 +34,40 @@ There are some cases (e.g. if you have an unlimited number of files of size
 1 bytes to distribute) in which also this algorithm will require too much
 memory, but in "typical" cases it should be relative fast and low in memory
 consumption. After all, the full problem is NP-complete, so by current state
-of research, one cannot expect a "perfect" solutoin.
+of research, one cannot expect a "perfect" solution.
 
 The program consists of a library which can be used independently:
 
-knapsack.h:  The main generic class implementing the algorithm
-                   The output functions have to be overloaded.
+- `knapsack.h`:
+	The main generic class implementing the algorithm.
+	The output functions have to be overloaded.
 
-The library is consumed by
+The library is consumed by:
 
-knapsack.cc: A simple CLI to the library.
+- `knapsack.cc`:
+	A simple CLI to the library
 
-Requirements:
+## Requirements
+
 The library needs the boost library for advanced hash functions.
-Since boost is needed anyway, also boost::format is used for convenience
-(the CLI additionally uses boost::program_options, boost::lexical_cast, and
-boost::split).
+Since boost is needed anyway, also `boost::format` is used for convenience
+(the CLI additionally uses `boost::program_options`, `boost::lexical_cast`,
+and `boost::split`).
 
-Installation:
+## Installation
+
 If the requirement is fulfilled, compilation of the CLI should be simple:
-Just run "make" (as user) and "make install" (as root)
-Look at the Makefile if you need to adapt paths.
+Just run `make` (as user) and `make install` (as root)
+Look at the `Makefile` if you need to adapt paths.
 
 To use the libraries, just include them (with the appropriate path);
-the description how to use the library is in the file knapsack.txt
+the description how to use the library is in the file `knapsack.txt`.
 
-To use the zsh completion file, make sure that it is in you zsh's $fpath.
+To use the zsh completion file, make sure that it is in you zsh's `$fpath`.
+
+## Usage
 
 To get help for the CLI, type
-knapsack -h
+```
+	knapsack -h
+```
