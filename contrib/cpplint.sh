@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
+# (C) Martin V\"ath <martin at mvath.de>
+# SPDX-License-Identifier: GPL-2.0-only
 set -u
 LC_ALL=C
 export LC_ALL

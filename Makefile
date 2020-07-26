@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-2.0-only
 PREFIX=/usr
 BIN_DIR=$(PREFIX)/bin
 ZSH_FPATH=$(PREFIX)/share/zsh/site-functions

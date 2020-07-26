@@ -5,6 +5,7 @@ A fast solver for the 0/1-knapsack problem with multiple knapsacks
 (C) Martin Väth (martin at mvath.de)-
 This project is distributed under the terms of the
 GNU General Public License v2.
+SPDX-License-Identifier: GPL-2.0-only
 
 This program was written rather quickly to train myself.
 It was later rewritten in a more general and efficient way.

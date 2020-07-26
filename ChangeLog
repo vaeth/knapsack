@@ -1,5 +1,9 @@
 # ChangeLog for knapsack
 
+*knapsack-7.3
+	Martin Väth <martin at mvath.de>:
+	- Add SPDX-License-Identifier
+
 *knapsack-7.2.1
 	Martin Väth <martin at mvath.de>:
 	- Cleaner code concerning boost exceptions

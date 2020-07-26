@@ -1,5 +1,6 @@
 // This file is part of the knapsack project and distributed under the
 // terms of the GNU General Public License v2.
+// SPDX-License-Identifier: GPL-2.0-only
 //
 // Copyright (c)
 //   Martin Väth <martin@mvath.de>
@@ -32,7 +33,7 @@ typedef unsigned long Integer;  // NOLINT(runtime/int)
 #endif
 typedef long double Float;
 
-static const char *version = "knapsack 7.2.1";
+static const char *version = "knapsack 7.3";
 
 using std::string;
 using std::vector;

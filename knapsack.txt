@@ -1,3 +1,5 @@
+SPDX-License-Identifier: GPL-2.0-only
+
 Description of the library (knapsack.h):
 
 The library consists exclusively of template classes which are successively

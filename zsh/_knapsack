@@ -1,4 +1,6 @@
 #compdef knapsack
+# (C) Martin V\"ath <martin at mvath.de>
+# SPDX-License-Identifier: GPL-2.0-only
 _arguments -s -S : \
 '(* -)'{'--help','-h'}'[print help]' \
 '(* -)'{'--version','-V'}'[print version]' \
