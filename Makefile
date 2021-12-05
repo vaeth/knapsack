@@ -7,7 +7,7 @@ PKGINCLUDE_PATH=$(INCLUDE_PATH)/knapsack
 
 PKGCONFIG = pkg-config
 BOOST_CFLAGS = -I$(INCLUDE_PATH)
-BOOST_LIBS = -lboost_program_options-mt
+BOOST_LIBS = -lboost_program_options
 
 CPPFLAGS_EXTRA = -I.
 CXXFLAGS_EXTRA = $(BOOST_CFLAGS)

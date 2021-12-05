@@ -1,5 +1,9 @@
 # ChangeLog for knapsack
 
+*knapsack-7.3.1
+	Martin Väth <martin at mvath.de>:
+	- Use standard boost library name
+
 *knapsack-7.3
 	Martin Väth <martin at mvath.de>:
 	- Add SPDX-License-Identifier
